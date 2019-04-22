@@ -81,6 +81,8 @@ from sklearn.metrics import precision_recall_fscore_support as score
 from keras.utils.np_utils import to_categorical
 from sklearn.utils import class_weight
 
+from sklearn.metrics import roc_auc_score
+
 # COMMAND ----------
 
 #1 - import module
@@ -95,7 +97,7 @@ from pyspark.sql.types import IntegerType
 
 ## File Part in HDP Server to be stored images of charts or graph or temp files
 tfb_log_dir ="/tmp/tfb_log_dir/"
-sparkAppName = "12_BDLSTM_RV8"
+sparkAppName = "16_BDLSTM_RV1"
 # define path to save model
 model_path = sparkAppName+".h5"
 
@@ -116,23 +118,9 @@ tfb_log_dir = tfb_log_dir+expContext
 print(expContext)
 
 ### Enable Tensorboard and save to the localtion
-#dbutils.tensorboard.start(tfb_log_dir)
+dbutils.tensorboard.start(tfb_log_dir)
 
 # COMMAND ----------
-
-#DATA_RV6-8
-# selectedCols = ['CODE','YEAR','CYCLE', 'RUL','LABEL1','LABEL2','BF_SD_TYPE','NOM_CYCLE','EVENT_ID','RESI_HH_LUBE_OIL_TEMP', 'RESI_LL_LUBE_OIL_PRESS',
-#  'RESI_LL_SPEED', 'RESI_HH_SPEED', 'RESI_LL_VIBRATION', 'RESI_HH_VIBRATION',  'RESI_HH_THROW1_DIS_TEMP', 'LUBE_OIL_PRESS',  'LUBE_OIL_TEMP', 'THROW_1_DISC_PRESS', 'THROW_1_DISC_TEMP', 'THROW_1_SUC_PRESS', 'THROW_2_DISC_PRESS', 'THROW_2_DISC_TEMP', 'THROW_2_SUC_PRESS', 'THROW_2_SUC_TEMP', 'THROW_3_DISC_PRESS', 'THROW_3_DISC_TEMP',
-# 'THROW_3_SUC_PRESS', 'THROW_4_DISC_PRESS', 'THROW_4_DISC_TEMP', 'VIBRATION', 'CYL_1_TEMP', 'CYL_2_TEMP', 'CYL_3_TEMP', 'CYL_4_TEMP', 'CYL_5_TEMP',
-# 'CYL_6_TEMP', 'CYL_7_TEMP', 'CYL_8_TEMP', 'CYL_9_TEMP', 'CYL_10_TEMP', 'CYL_11_TEMP', 'CYL_12_TEMP', 'LUBE_OIL_PRESS_ENGINE', 'SPEED',
-# 'VIBRA_ENGINE']
-
-#DATA_RV3-8
-# selectedCols = ['CODE','YEAR','CYCLE', 'RUL','LABEL1','LABEL2','BF_SD_TYPE','cycle_norm','EVENT_ID','RESI_HH_LUBE_OIL_TEMP', 'RESI_LL_LUBE_OIL_PRESS',
-#  'RESI_LL_SPEED', 'RESI_HH_SPEED', 'RESI_LL_VIBRATION', 'RESI_HH_VIBRATION',  'RESI_HH_THROW1_DIS_TEMP', 'LUBE_OIL_PRESS',  'LUBE_OIL_TEMP', 'THROW_1_DISC_PRESS', 'THROW_1_DISC_TEMP', 'THROW_1_SUC_PRESS', 'THROW_2_DISC_PRESS', 'THROW_2_DISC_TEMP', 'THROW_2_SUC_PRESS', 'THROW_2_SUC_TEMP', 'THROW_3_DISC_PRESS', 'THROW_3_DISC_TEMP',
-# 'THROW_3_SUC_PRESS', 'THROW_4_DISC_PRESS', 'THROW_4_DISC_TEMP', 'VIBRATION', 'CYL_1_TEMP', 'CYL_2_TEMP', 'CYL_3_TEMP', 'CYL_4_TEMP', 'CYL_5_TEMP',
-# 'CYL_6_TEMP', 'CYL_7_TEMP', 'CYL_8_TEMP', 'CYL_9_TEMP', 'CYL_10_TEMP', 'CYL_11_TEMP', 'CYL_12_TEMP', 'LUBE_OIL_PRESS_ENGINE', 'SPEED',
-# 'VIBRA_ENGINE']
 
 selectedCols = ['CODE','YEAR','CYCLE', 'RUL','LABEL1','LABEL2','NOM_CYCLE','EVENT_ID','RESI_HH_LUBE_OIL_TEMP', 'RESI_LL_LUBE_OIL_PRESS',
  'RESI_LL_SPEED', 'RESI_HH_SPEED', 'RESI_LL_VIBRATION', 'RESI_HH_VIBRATION',  'RESI_HH_THROW1_DIS_TEMP', 'RESI_HH_THROW1_SUC_TEMP', 'LUBE_OIL_PRESS',  'LUBE_OIL_TEMP', 'THROW_1_DISC_PRESS', 'THROW_1_DISC_TEMP', 'THROW_1_SUC_PRESS', 'THROW_1_SUC_TEMP', 'THROW_2_DISC_PRESS', 'THROW_2_DISC_TEMP', 'THROW_2_SUC_PRESS', 'THROW_2_SUC_TEMP', 'THROW_3_DISC_PRESS', 'THROW_3_DISC_TEMP',
@@ -145,19 +133,6 @@ sensor_cols = ['RESI_HH_LUBE_OIL_TEMP', 'RESI_LL_LUBE_OIL_PRESS',
 'THROW_3_SUC_PRESS', 'THROW_3_SUC_TEMP', 'THROW_4_DISC_PRESS', 'THROW_4_DISC_TEMP', 'VIBRATION', 'CYL_1_TEMP', 'CYL_2_TEMP', 'CYL_3_TEMP', 'CYL_4_TEMP', 'CYL_5_TEMP',
 'CYL_6_TEMP', 'CYL_7_TEMP', 'CYL_8_TEMP', 'CYL_9_TEMP', 'CYL_10_TEMP', 'CYL_11_TEMP', 'CYL_12_TEMP', 'LUBE_OIL_PRESS_ENGINE', 'MANI_PRESS', 'RIGHT_BANK_EXH_TEMP', 'SPEED',
 'VIBRA_ENGINE', 'S1_RECY_VALVE', 'S1_SUCT_PRESS', 'S1_SUCT_TEMPE', 'S2_STAGE_DISC_PRESS', 'S2_SCRU_SCRUB_LEVEL', 'GAS_LIFT_HEAD_PRESS', 'IN_CONT_CONT_VALVE', 'IN_SEP_PRESS']
-
-# selectedCols = ['CODE','YEAR','CYCLE', 'RUL','LABEL1','LABEL2','NOM_CYCLE','EVENT_ID','RESI_HH_LUBE_OIL_TEMP', 'RESI_LL_LUBE_OIL_PRESS',
-#  'RESI_LL_SPEED', 'RESI_HH_SPEED', 'RESI_LL_VIBRATION', 'RESI_HH_VIBRATION',  'RESI_HH_THROW1_DIS_TEMP', 'RESI_HH_THROW1_SUC_TEMP', 'LUBE_OIL_PRESS',  'LUBE_OIL_TEMP', 'THROW_1_DISC_PRESS', 'THROW_1_DISC_TEMP', 'THROW_1_SUC_PRESS', 'THROW_1_SUC_TEMP', 'THROW_2_DISC_PRESS', 'THROW_2_DISC_TEMP', 'THROW_2_SUC_PRESS', 'THROW_2_SUC_TEMP', 'THROW_3_DISC_PRESS', 'THROW_3_DISC_TEMP',
-# 'THROW_3_SUC_PRESS', 'THROW_3_SUC_TEMP', 'THROW_4_DISC_PRESS', 'THROW_4_DISC_TEMP', 'VIBRATION', 'CYL_1_TEMP', 'CYL_2_TEMP', 'CYL_3_TEMP', 'CYL_4_TEMP', 'CYL_5_TEMP',
-# 'CYL_6_TEMP', 'CYL_7_TEMP', 'CYL_8_TEMP', 'CYL_9_TEMP', 'CYL_10_TEMP', 'CYL_11_TEMP', 'CYL_12_TEMP', 'LUBE_OIL_PRESS_ENGINE', 'MANI_PRESS', 'RIGHT_BANK_EXH_TEMP', 'SPEED',
-# 'VIBRA_ENGINE']
-
-# sensor_cols = ['RESI_HH_LUBE_OIL_TEMP', 'RESI_LL_LUBE_OIL_PRESS',
-#  'RESI_LL_SPEED', 'RESI_HH_SPEED', 'RESI_LL_VIBRATION', 'RESI_HH_VIBRATION',  'RESI_HH_THROW1_DIS_TEMP', 'RESI_HH_THROW1_SUC_TEMP', 'LUBE_OIL_PRESS',  'LUBE_OIL_TEMP', 'THROW_1_DISC_PRESS', 'THROW_1_DISC_TEMP', 'THROW_1_SUC_PRESS', 'THROW_1_SUC_TEMP', 'THROW_2_DISC_PRESS', 'THROW_2_DISC_TEMP', 'THROW_2_SUC_PRESS', 'THROW_2_SUC_TEMP', 'THROW_3_DISC_PRESS', 'THROW_3_DISC_TEMP',
-# 'THROW_3_SUC_PRESS', 'THROW_3_SUC_TEMP', 'THROW_4_DISC_PRESS', 'THROW_4_DISC_TEMP', 'VIBRATION', 'CYL_1_TEMP', 'CYL_2_TEMP', 'CYL_3_TEMP', 'CYL_4_TEMP', 'CYL_5_TEMP',
-# 'CYL_6_TEMP', 'CYL_7_TEMP', 'CYL_8_TEMP', 'CYL_9_TEMP', 'CYL_10_TEMP', 'CYL_11_TEMP', 'CYL_12_TEMP', 'LUBE_OIL_PRESS_ENGINE', 'MANI_PRESS', 'RIGHT_BANK_EXH_TEMP', 'SPEED',
-# 'VIBRA_ENGINE']
-
 
 # propertyCols = ['CODE','YEAR','CYCLE', 'RUL','LABEL1','LABEL2','BF_SD_TYPE','NOM_CYCLE']
 propertyCols = ['CODE','YEAR','CYCLE', 'RUL','LABEL1','LABEL2','NOM_CYCLE']
@@ -178,8 +153,8 @@ w0 = 720
 
 # pick a large window size of 60 cycles
 # Target 1 days before failure 60 time steps
-sequence_length = 150
-input_length = 150
+sequence_length = 100
+input_length = 100
 
 sensor_av_cols = ["AVG_" + nm for nm in sensor_cols]
 sensor_sd_cols = ["SD_" + nm for nm in sensor_cols]
@@ -212,17 +187,7 @@ def round_down_float(n, decimals=0):
 # COMMAND ----------
 
 def normalizeMaxMinTrain(stdScaledDF,min_max_scaler):
-# MinMax normalization (from 0 to 1)
-  #sampleDataSet['NOM_CYCLE'] = sampleDataSet['CYCLE']
-#   cols_normalize = sampleDataSet.columns.difference(['EVENT_ID','YEAR','CYCLE','RUL','LABEL1','LABEL2','BF_SD_TYPE'])
-#   #print(cols_normalize)
-#   norm_train_df = pd.DataFrame(min_max_scaler.fit_transform(sampleDataSet[cols_normalize]), 
-#                                columns=cols_normalize, 
-#                                index=sampleDataSet.index)
-#   join_df = sampleDataSet[sampleDataSet.columns.difference(cols_normalize)].join(norm_train_df)
-#   sampleDataSet = join_df.reindex(columns = sampleDataSet.columns)
-#   print("Finish normalization train dataset!")
-  
+ 
   #train_df['cycle_norm'] = train_df['cycle']
   cols_normalize = stdScaledDF.columns.difference(['EVENT_ID','YEAR','CYCLE','RUL','LABEL1','LABEL2','NOM_CYCLE'])
   min_max_scaler = preprocessing.MinMaxScaler()
@@ -274,15 +239,15 @@ def upsampling(selectColDF,isTrain,isBinary):
       newUpDF0 = selectColDF.where("RUL BETWEEN 1 AND 1440")
       newUpDF0 = newUpDF0.selectExpr(dupColLabel0)
       
-      newUpDF1 = selectColDF.where("RUL BETWEEN 1 AND 1440")
-      newUpDF1 = newUpDF1.selectExpr(dupColLabel1)
+#       newUpDF1 = selectColDF.where("RUL BETWEEN 1 AND 1440")
+#       newUpDF1 = newUpDF1.selectExpr(dupColLabel1)
       
 #       newUpDF2 = selectColDF.where("RUL BETWEEN 1 AND 1440")
 #       newUpDF2 = newUpDF2.selectExpr(dupColLabel1)
       
-      newDF1 = newUpDF0.union(newUpDF1)
+#      newDF1 = newUpDF0.union(newUpDF1)
 #       newDF2 = newDF1.union(newUpDF2)
-      return newDF1
+      return newUpDF0
     else:
       newUpDF2 = selectColDF.where("RUL BETWEEN 1 AND 720")
       newUpDF2 = newUpDF2.selectExpr(dupColLabel2)
@@ -296,14 +261,14 @@ def upsampling(selectColDF,isTrain,isBinary):
       newUpDF1 = selectColDF.where("RUL BETWEEN 1441 AND 2881")
       return newUpDF1.selectExpr(dupColLabel1)
     else:
-      #Upsampling Positive Class Label 1
-      newUpDF1 = selectColDF.where("RUL BETWEEN 721 AND 1440")
-      newUpDF1 = newUpDF1.selectExpr(dupColLabel1)
-      #Upsampling Negative Class Label 0
-      newUpDF0 = selectColDF.where("RUL BETWEEN 1441 AND 2881")
+#       #Upsampling Positive Class Label 1
+#       newUpDF1 = selectColDF.where("RUL BETWEEN 721 AND 1440")
+#       newUpDF1 = newUpDF1.selectExpr(dupColLabel1)
+#       #Upsampling Negative Class Label 0
+      newUpDF0 = selectColDF.where("RUL BETWEEN 1441 AND 1800")
       newUpDF0 = newUpDF0.selectExpr(dupColLabel0)
-      
-    return newUpDF1.union(newUpDF0)
+      #return newUpDF1.union(newUpDF0)
+      return newUpDF0
 
 # COMMAND ----------
 
@@ -380,7 +345,7 @@ def getDataFromCSV(sqlContext, dbFSDir,eventIds, selectedCols, isTrainSet,isBina
   #compute dataframe using sql command via string
   selectColDF.createOrReplaceTempView("RC_DATA_TMP")
   #filter out the data during RC S/D
-  selectColDF = spark.sql("SELECT * FROM RC_DATA_TMP WHERE RUL between 1 and 7200 ORDER BY YEAR, EVENT_ID, CYCLE")
+  selectColDF = spark.sql("SELECT * FROM RC_DATA_TMP WHERE RUL BETWEEN 1 AND 3600 ORDER BY YEAR, EVENT_ID, CYCLE")
   selectColDF = selectColDF.dropDuplicates()
   ## Up positive samples X2
   
@@ -396,7 +361,7 @@ def getDataFromCSV(sqlContext, dbFSDir,eventIds, selectedCols, isTrainSet,isBina
 # COMMAND ----------
 
 ## Loading Index Data Table
-indexFilePath = "dbfs:/RC/MSATER_DATA_FILES/EVENT_ID_DATA_SETS_FULL_V9.csv"
+indexFilePath = "dbfs:/RC/MSATER_DATA_FILES/EVENT_ID_DATA_SETS_FULL_V10.csv"
 df2 = (sqlContext.read.option("header","true").option("inferSchema", "true").csv(indexFilePath))
 # If the path don't have file:/// -> it will call hdfs instead of local file system
 df2.cache()
@@ -564,45 +529,15 @@ def gen_data_train_val(targetColName, train_df,sequence_length, sequence_cols):
 
 # COMMAND ----------
 
-# import os
-# import time
+import os
+import time
 
-# # WARNING: This example is using DBFS FUSE, which is not suitable for large scale distributed DL workloads! Setup DL storage and update this path.
-# # FUSE_MOUNT_LOCATION = '/dbfs/mnt/Exploratory/WCLD/12_BDLSTM_RV7/model/hvd_checkpoint'
-# # "dbfs:/mnt/Exploratory/WCLD/12_BDLSTM_RV7"
-# # checkpoint_dir = FUSE_MOUNT_LOCATION + '{}/'.format(time.time())
-# # os.makedirs(checkpoint_dir)
+##WARNING: This example is using DBFS FUSE, which is not suitable for large scale distributed DL workloads! Setup DL storage and update this path.
+FUSE_MOUNT_LOCATION = "/dbfs/mnt/Exploratory/WCLD/"+sparkAppName+"/model/hvd_checkpoint"
 
-# COMMAND ----------
-
-def buildBinaryClassModel(algoName,old_weights,v_LSTMUnitLayer1,v_LSTMUnitLayer2,sequence_length,nb_features,nb_out,v_Dropout,v_maxEpoch,v_batch_size,seq_array, label_array,valSeq_array, valLabel_array,model):
-  if len(old_weights)<=0:
-    
-    print("Created New Model : "+algoName," Algo Mode :",algoName)
-    model.add(Bidirectional(LSTM(units=v_LSTMUnitLayer1, return_sequences=True),input_shape=(sequence_length, nb_features),merge_mode='concat'))
-    model.add(Dropout(v_Dropout))
-    model.add(Bidirectional(LSTM(units=v_LSTMUnitLayer2, return_sequences=False))) 
-    model.add(Dropout(v_Dropout))
-    model.add(Dense(units=nb_out, activation='sigmoid'))
-    
-#     print("Created New Model : "+modelName)
-#     model.add(LSTM(input_shape=(sequence_length, nb_features), units=v_LSTMUnitLayer1, return_sequences=True)) 
-#     model.add(Dropout(v_Dropout))
-#     model.add(LSTM(units=v_LSTMUnitLayer2, return_sequences=False)) 
-#     model.add(Dropout(v_Dropout))
-#     model.add(Dense(units=nb_out, activation='sigmoid'))
-    
-  else:
-    print("Model Already Constructed.")
-    
-  model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-  print(model.summary())
-  
-  #fit the network
-  history = model.fit(seq_array, label_array, epochs=v_maxEpoch, batch_size=v_batch_size, validation_data=(valLabel_array, valSeq_array), verbose=2,
-            callbacks = [tensor_board, keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=0, mode='min'),
-                         keras.callbacks.ModelCheckpoint(model_path,monitor='val_loss', save_best_only=True, mode='min', verbose=0)])  
-  return model, history
+"dbfs:/mnt/Exploratory/WCLD/"+sparkAppName
+checkpoint_dir = FUSE_MOUNT_LOCATION + '{}/'.format(time.time())
+os.makedirs(checkpoint_dir)
 
 # COMMAND ----------
 
@@ -668,19 +603,19 @@ def printDFPortion(train_df, val_df, label):
 
 # COMMAND ----------
 
-def gen_data_test_val(targetColName, test_df,sequence_length, sequence_cols):
+def gen_data_test_val(targetColName, data_df,sequence_length, sequence_cols):
   
   # We pick the last sequence for each id in the test data
-  seq_array_test_last = [test_df[test_df['EVENT_ID']==id][sequence_cols].values[-sequence_length:] 
-                         for id in test_df['EVENT_ID'].unique() if len(test_df[test_df['EVENT_ID']==id]) >= sequence_length]
+  seq_array_test_last = [data_df[data_df['EVENT_ID']==id][sequence_cols].values[-sequence_length:] 
+                         for id in data_df['EVENT_ID'].unique() if len(data_df[data_df['EVENT_ID']==id]) >= sequence_length]
 
   seq_array_test_last = np.asarray(seq_array_test_last).astype(np.float32)
   # Similarly, we pick the labels
   
-  y_mask = [len(test_df[test_df['EVENT_ID']==id]) >= sequence_length for id in test_df['EVENT_ID'].unique()]
+  y_mask = [len(data_df[data_df['EVENT_ID']==id]) >= sequence_length for id in data_df['EVENT_ID'].unique()]
   #print("y_mask")
   #print("y_mask:",y_mask)
-  label_array_test_last = test_df.groupby('EVENT_ID')[targetColName].nth(-1)[y_mask].values
+  label_array_test_last = data_df.groupby('EVENT_ID')[targetColName].nth(-1)[y_mask].values
   label_array_test_last = label_array_test_last.reshape(label_array_test_last.shape[0],1).astype(np.float32)
   
   return seq_array_test_last, label_array_test_last
@@ -819,7 +754,7 @@ def multiClassEvaluation(model, x_seq_array,y_label_array):
 
 def evaluationMetrics(x_seq_array, y_true_label,isBinary,model):
   
-  scores_test = model.evaluate(x_seq_array, y_true_label, verbose=1)
+  scores_test = model.evaluate(x_seq_array, y_true_label, verbose=0)
   print('Evaluation Accurracy: {}'.format(round_down_float(scores_test[1]*100,2)))
   print("Score: {} ".format(round_down_float(scores_test[0]*100,2)))
   
@@ -834,13 +769,13 @@ def evaluationMetrics(x_seq_array, y_true_label,isBinary,model):
 def isOptimal(history,countTrainSet,score,curVLoss,nEpoch):
   result=[]
   lossOptimal = False
-  curLoss =0.009
+  curLoss =0.01
   curMAcc = 0.90
   curVAcc = 0.90
   
   nMiniMumEpoch = 10
   optimalPoint = 3
-  maxBatch = 44
+  maxBatch = 35
   
   vLoss = history.history['val_loss']
   mLoss = history.history['loss']
@@ -912,7 +847,26 @@ def printProb(model,test_seq_array,test_label_array):
 
 # COMMAND ----------
 
-def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_scaler,isBinary):
+def auc_roc(y_true, y_pred):
+    # any tensorflow metric
+    value, update_op = tf.contrib.metrics.streaming_auc(y_pred, y_true)
+
+    # find all variables created for this metric
+    metric_vars = [i for i in tf.local_variables() if 'auc_roc' in i.name.split('/')[1]]
+
+    # Add metric variables to GLOBAL_VARIABLES collection.
+    # They will be initialized for new session.
+    for v in metric_vars:
+        tf.add_to_collection(tf.GraphKeys.GLOBAL_VARIABLES, v)
+
+    # force to update metric values
+    with tf.control_dependencies([update_op]):
+        value = tf.identity(value)
+        return value
+
+# COMMAND ----------
+
+def train_hvd(modelCode,model, trainMap,valMap, mode,tf,learning_rate,min_max_scaler,isBinary,old_weights,startSet,startEpoch):
   tensor_board = TensorBoard(log_dir=tfb_log_dir, histogram_freq=1, write_graph=True, write_images=True)
   #isBinary = True
   
@@ -938,16 +892,16 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
     K.set_session(tf.Session(config=config))
 
     # Horovod: adjust learning rate based on number of GPUs.
-    optimizer = keras.optimizers.Adadelta(learning_rate * hvd.size())
+    v_optimizer = keras.optimizers.Adadelta(learning_rate * hvd.size())
     # Horovod: Wrap optimizer with Horovod DistributedOptimizer.
-    optimizer = hvd.DistributedOptimizer(optimizer)
+    v_optimizer = hvd.DistributedOptimizer(v_optimizer)
   
     # Horovod: Broadcast initial variable states from rank 0
     # to all other processes. This is necessary to ensure 
     # consistent initialization of all workers when training is
     # started with random weights or restored from a checkpoint.
     tensor_board = TensorBoard(log_dir=tfb_log_dir, histogram_freq=1, write_graph=True, write_images=True)
-    callbacks = [tensor_board, hvd.callbacks.BroadcastGlobalVariablesCallback(0)]
+    callbacks = [tensor_board, hvd.callbacks.BroadcastGlobalVariablesCallback(0), keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=0, mode='min')]
   
   
     #modelNameList = ["buildBinaryClassModel","buildMultipleClassModel","buildMultiAttentionModel"]
@@ -957,18 +911,18 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
     #v_optimizer = keras.optimizers.RMSprop(lr=learning_rate)
     #v_optimizer = keras.optimizers.SGD(lr=learning_rate, clipvalue=1)
     #v_optimizer =  keras.optimizers.SGD(lr=learning_rate, decay=1e-6, momentum=0.9, nesterov=True)
-    callbacks = [tensor_board]
+    callbacks = [tensor_board, 
+                 #keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=0, mode='min')
+                 keras.callbacks.EarlyStopping(monitor='auc_roc', patience=10, verbose=1, mode='max')
+                ]
   
   print("Start Train Model ",mode)
   
   cLoop = 1
-  #trainedSets = {}
-  test_df={}
   resultMetric = {}
   score = 0
-  rolling_win_size = 60
+  rolling_win_size = 30
   isNotSatisfacEval = True
-  old_weights =""
   nEpochs = 10
   lossOptimal = False
   history =""
@@ -976,53 +930,78 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
   cvscores = []
   curVLoss = 0.001
   resutl = []
-  maxBatch = 1
+  maxBatch = 10
   
-  val_seq_array, val_label_array = gen_data_test_val(targetColName, val_df,sequence_length, sequence_cols)
   ## Multiple Classifications
   #val_label_array = to_categorical(val_label_array, num_classes=3, dtype='int32')
+  
+  if startEpoch>1:
+    cLoop = startEpoch
+  else:
+    cLoop = 1
     
   for nEpoch in range(nEpochs):
+    
     countTrainSet = 1
     trainDataSetKeys = trainMap.keys()
     
     #Hyperparameters
-    v_batch_size = 400
+    v_batch_size = 200
     v_validation_split = 0.05
     v_verbose = 2
     
     #verbose: Integer. 0, 1, or 2. Verbosity mode. 0 = silent, 1 = progress bar, 2 = one line per epoch
     
-    v_LSTMUnitLayer1 = 150
-    
+    v_LSTMUnitLayer1 = 100
     v_LSTMUnitLayer2 = 50
-    v_LSTMUnitLayer3 = 50
+    v_LSTMUnitLayer3 = 30
     
     v_Dropout = 0.2
-    v_maxEpoch = 1
+    v_maxEpoch = 20
     scores_test = []
     
     for trainKey in trainDataSetKeys:
-      if (trainKey>=0 and nEpoch>0):
-        
+      if (trainKey>=startSet and nEpoch>=startEpoch):
         if isNotSatisfacEval is True:
           print("Starting Loop (cLoop) : ",str(cLoop))
           print("Train model using dataset {",str(trainKey),"}")
           isTrainSet = True
-          train_df_new = getDataFromCSV(sqlContext, dbFSDir,trainMap[trainKey], selectedCols,isTrainSet,isBinary)
+          train_df = getDataFromCSV(sqlContext, dbFSDir,trainMap[trainKey], selectedCols,isTrainSet,isBinary)
           
           ##Correct Sample Labels
-          train_df_new = genSampleLabel(train_df_new)
+          train_df = genSampleLabel(train_df)
           ##train_df = train_df.append(train_df)
-          train_df_new = train_df_new.sort_values(['CODE','YEAR','EVENT_ID','CYCLE'])
-          train_df_new = add_features(train_df_new, rolling_win_size , sensor_cols)
-          train_df_new = train_df_new.drop(columns=columns_to_drop)
-          #train_df_new,min_max_scaler = normalizeMaxMinTrain(train_df_new,min_max_scaler)
-          train_df_new = train_df_new.sort_values(['EVENT_ID','CYCLE'])
-          train_df_new = train_df_new.drop_duplicates(['EVENT_ID','CYCLE'], keep='last')
+          train_df = train_df.sort_values(['CODE','YEAR','EVENT_ID','CYCLE'])
+          train_df = add_features(train_df, rolling_win_size , sensor_cols)
+          train_df = train_df.drop(columns=columns_to_drop)
+          train_df,min_max_scaler = normalizeMaxMinTrain(train_df,min_max_scaler)
+          train_df = train_df.sort_values(['EVENT_ID','CYCLE'])
+          train_df = train_df.drop_duplicates(['EVENT_ID','CYCLE'], keep='last')
+          seq_array, label_array, nb_features, nb_out = gen_data_train_val(targetColName, train_df,sequence_length, sequence_cols)
           
-          printDFPortion(train_df_new, val_df, targetColName)
-          seq_array, label_array, nb_features, nb_out = gen_data_train_val(targetColName, train_df_new,sequence_length, sequence_cols)
+          valDataSetKeys = valMap.keys()
+          
+          if trainKey in valDataSetKeys:
+            print("Loading Validate dataset[",trainKey,"]")
+            val_df = getDataFromCSV(sqlContext, dbFSDir,valMap[trainKey], selectedCols,True,isBinary)
+            val_df = val_df.sort_values(['CODE','YEAR','EVENT_ID','CYCLE'])
+            val_df = add_features(val_df, rolling_win_size , sensor_cols)
+            val_df = genSampleLabel(val_df)
+            val_df = val_df.drop(columns=columns_to_drop)
+            val_df, min_max_scaler = normalizeMaxMinTrain(val_df,min_max_scaler)
+            val_df = val_df.sort_values(['EVENT_ID','CYCLE'])
+            val_df = val_df.drop_duplicates(['EVENT_ID','CYCLE'], keep='last')
+            
+            ## Verify all sample sequences
+            val_seq_array, val_label_array, nb_features_val, nb_out_val = gen_data_train_val(targetColName, val_df,sequence_length, sequence_cols)
+            ## Verify all sample sequences
+            ##test_seq_array, test_label_array = gen_data_test_val(targetColName, val_df,sequence_length, sequence_cols)
+            
+          else:
+            print("Error not found validation set matching with traing set number:",trainKey)
+          
+          printDFPortion(train_df, val_df, targetColName)
+          
 #           print("Finish Gen Train Data Sequence")
 #           print("Finish Gen Validate Data Sequence")
           
@@ -1035,7 +1014,7 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
             if hvd.rank() == 0:
               callbacks.append(keras.callbacks.ModelCheckpoint(checkpoint_dir+ str(cLoop)+'checkpoint-hvd.hdf5', save_weights_only=True))
           
-          original_label_array = label_array
+          #original_label_array = label_array
           
           #Multiple Classification
           #label_array = to_categorical(label_array, num_classes=3, dtype='int32')
@@ -1077,23 +1056,23 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
             print("Failed reset weights.")
             pass
           
-          try:
-            model = multi_gpu_model(model,gpus=4, cpu_merge=False)
-            print("Training using multiple GPUs..")
-          except:
-            print("Training using single GPU or CPU..")
-            pass
+#           try:
+#             model = multi_gpu_model(model,gpus=4)
+#             print("Training using multiple GPUs..")
+#           except:
+#             print("Training using single GPU or CPU..")
+#             pass
           
           if nb_classes>2:
             model.compile(loss='categorical_crossentropy', optimizer=v_optimizer, metrics=['accuracy'])
             print("set loss: categorical_crossentropy ")
           else:
-            model.compile(loss='binary_crossentropy', optimizer=v_optimizer, metrics=['accuracy'])
+            model.compile(loss='binary_crossentropy', optimizer=v_optimizer, metrics=['accuracy',auc_roc])
             print("set loss: binary_crossentropy ")
             
           print(model.summary())
           
-          processCode = str(cLoop)+"_R_"+str(countTrainSet)
+          processCode = str(cLoop)+"_R_"+str(trainKey)
           
           if mode=="HRV":
             if hvd.rank() == 0:
@@ -1104,9 +1083,10 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
                               batch_size=v_batch_size,
                               epochs=v_maxEpoch, 
                               verbose=2,
-                  #validation_data=(val_seq_array, val_label_array),
-                  validation_split=v_validation_split,
-                  callbacks = callbacks)
+                  validation_data=(val_seq_array, val_label_array)
+                  ,#validation_split=v_validation_split,
+                  callbacks = callbacks
+                             )
           
               
           try:
@@ -1118,7 +1098,6 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
           # list all data in history
           print(history.history.keys())
           
-            
           #val_seq_array, val_label_array = gen_data_test_val(targetColName, val_df,sequence_length, sequence_cols)
           #val_label_array = to_categorical(val_label_array, num_classes=3, dtype='int32')
           # cm,precision_test,recall_test,f1_test, y_true_label, y_predicted = evaluationMetrics(val_seq_array,val_label_array,isBinary,model)
@@ -1128,14 +1107,14 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
           try:
             
             #cm,precision_test,recall_test,f1_test, y_true_label, y_predicted, y_pred_prop, y_pred_prob_thrldeshod = evaluationMetrics(val_seq_array,val_label_array,isBinary,model)
-            cm,precision_test,recall_test,f1_test, y_true_label, y_pred_class, y_pred_prop, y_pred_prob_threshold = evaluationMetrics(val_seq_array,val_label_array,isBinary,model)
+            cm,precision_test,recall_test,f1_test, y_true_label, y_pred_class, y_pred_prop, y_pred_prob_threshold = evaluationMetrics(val_seq_array, val_label_array,isBinary,model)
             
           except:
             precision_test = 0
             recall_test = 0
             f1_test=0
             print("Error in evaluation performance [evaluationMetrics]!")
-            return model
+            #return model
             pass
           
           if len(old_weights)==0:
@@ -1178,6 +1157,8 @@ def train_hvd(modelCode,model, trainMap,val_df,mode,tf,learning_rate,min_max_sca
           else:
             break
           cLoop = cLoop+1
+        else:
+          print("Skip DataSet:",trainKey)
       else:
         print("Train and evaluation is satisfactory!")
         break
@@ -1203,33 +1184,6 @@ def genSampleLabel(data_df):
 
 # COMMAND ----------
 
-# testMap = {30: [3868, 4163, 4178, 4242, 4381, 4411, 4452, 4466, 5137, 5163, 6647, 3899, 3987, 4200, 4421, 4433, 4472, 4475, 4478, 4484, 4575, 4628, 6398, 6777], 31: [3909, 3978, 4402, 4457, 4500, 4528, 4577, 4701, 6324, 6380, 6709, 3922, 3985, 4013, 4415, 4422, 4470, 4503, 4584, 4623, 4690, 4710, 4731, 4821], 32: [3942, 3986, 4295, 4517, 4560, 4799, 4820, 4824, 4827, 4918, 4968, 3924, 3938, 4065, 4146, 4532, 4553, 4600, 4741, 4800, 4869, 4873, 4889, 4935], 33: [4010, 4040, 4052, 4523, 4579, 4596, 4597, 4620, 4733, 4763, 4829, 4854, 4883, 4888, 4950, 4984, 5746, 5753, 5808, 5942, 6233, 4165, 4612, 4912], 34: [4642, 4676, 4774, 4867, 4932, 4947, 4953, 4989, 4992, 5001, 5012, 5027, 5799, 5806, 5999, 6001, 6012, 6027, 6041, 6058, 6070, 6127, 6510, 6770]}
-
-val_df = {}
-valDataSetKeys = valMap.keys()
-rolling_win_size = 60
-min_max_scaler = preprocessing.MinMaxScaler()
-isBinary = True
-
-for valKey in valDataSetKeys:
-  print("Loading Validate dataset[",valKey,"]",valMap[valKey])
-  val_df_new = getDataFromCSV(sqlContext, dbFSDir,valMap[valKey], selectedCols,False,isBinary)
-  val_df_new = val_df_new.sort_values(['CODE','YEAR','EVENT_ID','CYCLE'])
-  val_df_new = add_features(val_df_new, rolling_win_size , sensor_cols)
-  
-  if len(val_df)>0:
-    val_df = val_df.append(val_df_new)
-  else:
-    val_df = val_df_new
-  
-val_df = genSampleLabel(val_df)
-val_df = val_df.drop(columns=columns_to_drop)
-#normalized_val_df, min_max_scaler = normalizeMaxMinTrain(val_df,min_max_scaler)
-val_df = val_df.sort_values(['EVENT_ID','CYCLE'])
-val_df = val_df.drop_duplicates(['EVENT_ID','CYCLE'], keep='last')
-
-# COMMAND ----------
-
 # print(normalized_val_df[normalized_val_df['EVENT_ID']>=3868])
 
 # COMMAND ----------
@@ -1243,25 +1197,91 @@ val_df = val_df.drop_duplicates(['EVENT_ID','CYCLE'], keep='last')
 
 # COMMAND ----------
 
-printDFPortion(val_df, val_df, "LABEL1")
+#printDFPortion(val_df, val_df, "LABEL1")
 
 # COMMAND ----------
 
-#hr = HorovodRunner(np=-1)
-model = Sequential()
-#hr.run(train_hvd("BDLSTM",model, trainMap,val_df,"HRV",tf,learning_rate=0.001))
-learning_rate=0.0001
+rolling_win_size = 60
+min_max_scaler = preprocessing.MinMaxScaler()
+isBinary = True
+
+# COMMAND ----------
+
+# test_seq_array, test_label_array = gen_data_test_val("LABEL1", test_df,sequence_length, sequence_cols)
+# #test_seq_array, test_label_array = gen_data_test_val(targetColName, test_df,sequence_length, sequence_cols)
+
+# COMMAND ----------
+
+# test_df.columns
+
+# COMMAND ----------
+
+# print(test_seq_array[0:2])
+
+# COMMAND ----------
+
+def loadModel(modelPath):
+  model = Sequential()
+  
+  if os.path.isfile(modelPath):
+    model = load_model(modelPath)
+    print("Model Loaded!")
+  else:
+    print("Model File Not Found!")
+  return model
+
+# COMMAND ----------
+
+runMode = "RELOAD"
+startSet = 8
+startEpoch = 1
+
+modelPath = "7_R_7_16_BDLSTM_RV1.h5"
+
+old_weights =""
+
+if runMode == "RELOAD":  
+  a = "dbfs:/mnt/Exploratory/WCLD/16_BDLSTM_RV1/"+modelPath
+  b = "file:/databricks/driver/model"
+  try:
+    dbutils.fs.mkdirs("file:/databricks/driver/model")
+  except:
+    print("Error in creating new folder.")
+  copyData(a,b,False)
+  model = loadModel(modelPath)
+  try:
+    old_weights = model.get_weights()
+    # evaluate the model
+  except:
+    model = Sequential()
+    print("Error get_weights !")
+else:
+  model = Sequential()
+  startSet = 1
+  startEpoch = 1
+
+#hr = HorovodRunner(np=3)  
+learning_rate=0.001
+
+#hr.run(train_hvd("BDLSTM",model, trainMap,val_df,"HRV",tf,learning_rate))
+
 ##{BDLSTM-BI,BDLSTM-MULTI}
-model = train_hvd("BDLSTM-BI",model, trainMap,val_df,"MULTIGPUS",tf,learning_rate,min_max_scaler,isBinary)
+
+#model = hr.run(train_hvd("BDLSTM-BI",model, trainMap,valMap, "HRV",tf,learning_rate,min_max_scaler,isBinary,old_weights,startSet,startEpoch))
+model = train_hvd("BDLSTM-BI",model, trainMap,valMap, "SINGLEGPU",tf,learning_rate,min_max_scaler,isBinary,old_weights,startSet,startEpoch)
 
 # COMMAND ----------
+
 
 ##Test Sets:
 totalEvents =0
-testMap,totalEvents = loadDataSet("TEST")
+testMap, totalEvents = loadDataSet("TEST")
 # print("Total Events in Test Dataset : ",str(totalEvents))
 # testMap = {30: [3868, 4163, 4178, 4242, 4381, 4411, 4452, 4466, 5137, 5163, 6647, 3899, 3987, 4200, 4421, 4433, 4472, 4475, 4478, 4484, 4575, 4628, 6398, 6777], 31: [3909, 3978, 4402, 4457, 4500, 4528, 4577, 4701, 6324, 6380, 6709, 3922, 3985, 4013, 4415, 4422, 4470, 4503, 4584, 4623, 4690, 4710, 4731, 4821], 32: [3942, 3986, 4295, 4517, 4560, 4799, 4820, 4824, 4827, 4918, 4968, 3924, 3938, 4065, 4146, 4532, 4553, 4600, 4741, 4800, 4869, 4873, 4889, 4935], 33: [4010, 4040, 4052, 4523, 4579, 4596, 4597, 4620, 4733, 4763, 4829, 4854, 4883, 4888, 4950, 4984, 5746, 5753, 5808, 5942, 6233, 4165, 4612, 4912], 34: [4642, 4676, 4774, 4867, 4932, 4947, 4953, 4989, 4992, 5001, 5012, 5027, 5799, 5806, 5999, 6001, 6012, 6027, 6041, 6058, 6070, 6127, 6510, 6770]}
-# testMap = {30: [3868, 4163, 4178, 4242, 4381, 4411, 4452, 4466, 5137, 5163, 6647, 3899, 3987, 4200, 4421, 4433, 4472, 4475, 4478, 4484, 4575, 4628, 6398, 6777]}
+
+# testMap = {1: [4010, 4040, 4052, 4523, 4579, 4596, 4597, 4620, 4733, 4763, 4829, 4854, 4883, 4888, 4950, 4984, 5746, 5753, 5808, 5942, 6233, 4165, 4612, 4912], 
+#            2: [4642, 4676, 4774, 4867, 4932, 4947, 4953, 4989, 4992, 5001, 5012, 5027, 5799, 5806, 5999, 6001, 6012, 6027, 6041, 6058, 6070, 6127, 6510, 6770]}
+# testMap = {1: [4010, 4040]}
 
 print(testMap)
 testDataSetKeys = testMap.keys()
@@ -1270,19 +1290,21 @@ test_df = {}
 
 for testKey in testDataSetKeys:
   print("Loading Test dataset[",testKey,"]",testMap[testKey])
-  test_df_new = getDataFromCSV(sqlContext, dbFSDir,testMap[testKey], selectedCols,False,isBinary)
-  test_df_new = test_df_new.sort_values(['CODE','YEAR','EVENT_ID','CYCLE'])
-  test_df_new = add_features(test_df_new, rolling_win_size , sensor_cols)
+  new_test_df = getDataFromCSV(sqlContext, dbFSDir,testMap[testKey], selectedCols,False,isBinary)
+  new_test_df = new_test_df.sort_values(['CODE','YEAR','EVENT_ID','CYCLE'])
+  new_test_df = add_features(new_test_df, rolling_win_size , sensor_cols)
 
   if len(test_df)>0:
-    test_df = test_df.append(test_df_new)
+    test_df = test_df.append(new_test_df)
   else:
-    test_df = test_df_new
+    test_df = new_test_df
   
-test_df = test_df.drop(columns=columns_to_drop)
-test_df,min_max_scaler = normalizeMaxMinTrain(test_df,min_max_scaler)
-test_df = test_df.sort_values(['EVENT_ID','CYCLE'])
-test_df = test_df.drop_duplicates(['EVENT_ID','CYCLE'], keep='last')
+  test_df = test_df.drop(columns=columns_to_drop)
+  test_df, min_max_scaler = normalizeMaxMinTrain(test_df,min_max_scaler)
+  test_df = test_df.sort_values(['EVENT_ID','CYCLE'])
+  test_df = test_df.drop_duplicates(['EVENT_ID','CYCLE'], keep='last')
+  break
+  
 
 # COMMAND ----------
 
